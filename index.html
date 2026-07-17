@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>梅子树下酒庄 - 云南高原匠心果酒</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+    <style>
+        :root {
+            --gold: #c9a96e;
+            --gold-light: #e8d5a3;
+            --dark: #1a1a1a;
+            --dark-light: #2d2d2d;
+            --cream: #faf6f0;
+            --wine-red: #8b2635;
+            --edit-blue: #4a90d9;
+            --edit-bg: rgba(74, 144, 217, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
+            background: var(--cream); color: var(--dark);
+            overflow-x: hidden; -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== 编辑模式高亮 ===== */
+        body.editing [data-editable] {
+            outline: 2px dashed var(--edit-blue);
+            outline-offset: 2px;
+            background: var(--edit-bg);
+            cursor: text;
+            border-radius: 2px;
+            transition: background 0.2s;
+        }
+        body.editing [data-editable]:hover {
+            outline: 2px solid var(--edit-blue);
+            background: rgba(74, 144, 217, 0.15);
+        }
+        body.editing [data-editable]:focus {
+            outline: 2px solid var(--edit-blue);
+            background: rgba(74, 144, 217, 0.2);
+        }
+        .edit-hint {
+            display: none; position: fixed; top: 70px; left: 50%;
+            transform: translateX(-50%); z-index: 9999;
+            background: var(--edit-blue); color: #fff;
+            padding: 8px 20px; border-radius: 20px; font-size: 13px;
+            letter-spacing: 1px; box-shadow: 0 4px 12px rgba(74,144,217,0.3);
+            animation: fadeInUp 0.4s ease;
+        }
+        body.editing .edit-hint { display: block; }
+
+        /* ===== 浮动工具栏 ===== */
+        .fab-bar {
+            position: fixed; bottom: 24px; right: 16px;
+            z-index: 9998; display: flex; flex-direction: column;
+            gap: 12px; align-items: flex-end;
+        }
+        .fab-btn {
+            width: 52px; height: 52px; border-radius: 50%;
+            border: none; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            transition: all 0.3s ease; color: #fff;
+        }
+        .fab-btn:hover { transform: scale(1.1); }
+        .fab-btn:active { transform: scale(0.95); }
+        .fab-share { background: linear-gradient(135deg, #07c160, #05a050); }
+        .fab-edit { background: linear-gradient(135deg, var(--edit-blue), #357abd); }
+        .fab-edit.active { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .fab-more { background: linear-gradient(135deg, var(--gold), #b08d55); }
+        .fab-label {
+            position: absolute; right: 60px; top: 50%;
+            transform: translateY(-50%); white-space: nowrap;
+            background: rgba(0,0,0,0.75); color: #fff;
+            padding: 4px 10px; border-radius: 4px; font-size: 12px;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .fab-btn:hover .fab-label { opacity: 1; }
+
+        /* 分享面板 */
+        .share-panel {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            z-index: 10000; background: #fff;
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px 32px; transform: translateY(110%);
+            transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+        }
+        .share-panel.open { transform: translateY(0); }
+        .share-panel-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 9999; background: rgba(0,0,0,0.5); opacity: 0;
+            pointer-events: none; transition: opacity 0.3s;
+        }
+        .share-panel-overlay.open { opacity: 1; pointer-events: auto; }
+        .share-title {
+            text-align: center; font-size: 16px; font-weight: 600;
+            color: var(--dark); margin-bottom: 24px; letter-spacing: 2px;
+        }
+        .share-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 16px; margin-bottom: 20px;
+        }
+        .share-item {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 8px; cursor: pointer; padding: 8px 4px;
+            border-radius: 12px; transition: background 0.2s;
+        }
+        .share-item:hover { background: #f5f5f5; }
+        .share-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: #fff;
+        }
+        .share-icon.wx { background: #07c160; }
+        .share-icon.pyq { background: #07c160; }
+        .share-icon.link { background: var(--gold); }
+        .share-icon.copy { background: var(--edit-blue); }
+        .share-icon.poster { background: var(--wine-red); }
+        .share-icon.browser { background: #666; }
+        .share-icon.edit { background: #e74c3c; }
+        .share-icon.save { background: #27ae60; }
+        .share-text { font-size: 12px; color: #666; }
+        .share-cancel {
+            width: 100%; padding: 14px; text-align: center;
+            font-size: 15px; color: #666; border-top: 1px solid #eee;
+            cursor: pointer; letter-spacing: 2px;
+        }
+
+        /* 海报弹窗 */
+        .poster-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10001; background: rgba(0,0,0,0.85);
+            display: none; flex-direction: column; align-items: center;
+            justify-content: center; padding: 20px;
+        }
+        .poster-modal.open { display: flex; }
+        .poster-box {
+            max-width: 360px; width: 100%; max-height: 70vh;
+            overflow: auto; border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: #fff;
+        }
+        .poster-box img { width: 100%; display: block; }
+        .poster-tip {
+            text-align: center; color: #fff; font-size: 14px;
+            margin-top: 16px; line-height: 1.8;
+        }
+        .poster-close {
+            position: absolute; top: 16px; right: 16px;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); border: none;
+            color: #fff; font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.9);
+            z-index: 10002; background: rgba(0,0,0,0.8); color: #fff;
+            padding: 14px 28px; border-radius: 8px; font-size: 14px;
+            letter-spacing: 1px; opacity: 0; pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+
+        /* 微信分享提示 */
+        .wx-tip {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 10003;
+            background: rgba(0,0,0,0.75); color: #fff; text-align: center;
+            padding: 20px 16px 40px; display: none; font-size: 15px;
+            line-height: 1.8;
+        }
+        .wx-tip.open { display: block; }
+        .wx-tip-arrow {
+            position: absolute; top: 8px; right: 24px;
+            width: 0; height: 0; border-left: 10px solid transparent;
+            border-right: 10px solid transparent; border-bottom: 10px solid rgba(0,0,0,0.75);
+        }
+
+        /* ===== 导航 ===== */
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 12px 20px; display: flex; justify-content: space-between;
+            align-items: center; transition: all 0.4s ease;
+        }
+        .nav.scrolled {
+            background: rgba(26,26,26,0.95); backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+        .nav-logo { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        .nav-menu { display: flex; gap: 20px; }
+        .nav-menu a { color: #fff; text-decoration: none; font-size: 13px; letter-spacing: 1px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); transition: color 0.3s; }
+        .nav-menu a:hover { color: var(--gold); }
+
+        /* ===== Hero ===== */
+        .hero { position: relative; height: 100vh; min-height: 600px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
+        .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a0a0a 0%, #2d1810 30%, #1a1a1a 70%, #0d1f0d 100%); }
+        .hero-bg::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('images/winery.jpg') center/cover no-repeat; opacity: 0.35; filter: brightness(0.6); }
+        .hero-particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+        .particle { position: absolute; width: 4px; height: 4px; background: var(--gold-light); border-radius: 50%; opacity: 0; animation: float 8s infinite ease-in-out; }
+        @keyframes float { 0%,100% { opacity:0; transform:translateY(0) scale(0); } 20% { opacity:0.8; } 50% { opacity:0.4; transform:translateY(-100vh) scale(1); } 80% { opacity:0; } }
+        .hero-content { position: relative; z-index: 2; padding: 0 30px; }
+        .hero-subtitle { font-size: 13px; color: var(--gold); letter-spacing: 8px; margin-bottom: 20px; opacity: 0; animation: fadeInUp 1s 0.3s forwards; }
+        .hero-title { font-size: 42px; font-weight: 700; color: #fff; letter-spacing: 6px; line-height: 1.3; margin-bottom: 16px; opacity: 0; animation: fadeInUp 1s 0.6s forwards; }
+        .hero-title span { display: block; font-size: 56px; background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: none; }
+        .hero-desc { font-size: 15px; color: rgba(255,255,255,0.7); letter-spacing: 3px; margin-bottom: 40px; opacity: 0; animation: fadeInUp 1s 0.9s forwards; }
+        .hero-since { display: inline-block; padding: 8px 24px; border: 1px solid var(--gold); color: var(--gold); font-size: 13px; letter-spacing: 4px; opacity: 0; animation: fadeInUp 1s 1.2s forwards; }
+        .scroll-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 2; opacity: 0; animation: fadeInUp 1s 1.8s forwards; }
+        .scroll-hint span { display: block; width: 24px; height: 40px; border: 2px solid rgba(255,255,255,0.4); border-radius: 12px; position: relative; }
+        .scroll-hint span::after { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 4px; height: 8px; background: var(--gold); border-radius: 2px; animation: scrollDot 2s infinite; }
+        @keyframes scrollDot { 0%,100% { top: 8px; opacity: 1; } 50% { top: 20px; opacity: 0.3; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===== Section通用 ===== */
+        .section { padding: 80px 20px; position: relative; }
+        .section-header { text-align: center; margin-bottom: 50px; }
+        .section-label { font-size: 12px; color: var(--gold); letter-spacing: 6px; margin-bottom: 12px; }
+        .section-title { font-size: 28px; font-weight: 700; color: var(--dark); letter-spacing: 4px; position: relative; display: inline-block; }
+        .section-title::after { content: ''; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); width: 40px; height: 2px; background: var(--gold); }
+        .section-desc { font-size: 14px; color: #666; margin-top: 28px; line-height: 1.8; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+        /* ===== 品牌介绍 ===== */
+        .about { background: #fff; }
+        .about-content { max-width: 700px; margin: 0 auto; }
+        .about-image { width: 100%; height: 280px; border-radius: 12px; overflow: hidden; margin-bottom: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .about-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+        .about-image:hover img { transform: scale(1.05); }
+        .about-text { font-size: 15px; line-height: 2; color: #444; text-align: justify; }
+        .about-text p { margin-bottom: 16px; text-indent: 2em; }
+        .about-quote { text-align: center; margin: 40px 0; padding: 30px; background: linear-gradient(135deg, #faf6f0, #f5efe5); border-radius: 12px; border-left: 4px solid var(--gold); }
+        .about-quote p { font-size: 18px; color: var(--dark); font-weight: 600; letter-spacing: 2px; text-indent: 0; }
+        .brands { display: flex; justify-content: center; gap: 30px; margin-top: 30px; flex-wrap: wrap; }
+        .brand-tag { padding: 10px 24px; background: var(--dark); color: var(--gold); font-size: 14px; letter-spacing: 2px; border-radius: 4px; }
+
+        /* ===== 酿造工艺 ===== */
+        .craft { background: linear-gradient(180deg, #fff 0%, var(--cream) 100%); }
+        .craft-grid { display: grid; grid-template-columns: 1fr; gap: 30px; max-width: 700px; margin: 0 auto; }
+        .craft-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08); opacity: 0; transform: translateY(40px); transition: all 0.6s ease; }
+        .craft-card.visible { opacity: 1; transform: translateY(0); }
+        .craft-card:hover { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
+        .craft-image { width: 100%; height: 380px; overflow: hidden; }
+        .craft-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+        .craft-card:hover .craft-image img { transform: scale(1.03); }
+        .craft-info { padding: 24px 28px; }
+        .craft-info h3 { font-size: 18px; color: var(--dark); letter-spacing: 3px; margin-bottom: 8px; }
+        .craft-info p { font-size: 14px; color: #666; line-height: 1.8; }
+        .craft-tips { max-width: 700px; margin: 40px auto 0; padding: 30px; background: linear-gradient(135deg, var(--dark), var(--dark-light)); border-radius: 12px; text-align: center; opacity: 0; transform: translateY(30px); transition: all 0.6s ease; }
+        .craft-tips.visible { opacity: 1; transform: translateY(0); }
+        .craft-tips h3 { font-size: 18px; color: var(--gold); letter-spacing: 4px; margin-bottom: 16px; }
+        .craft-tips p { font-size: 15px; color: rgba(255,255,255,0.8); line-height: 2; letter-spacing: 1px; }
+        .craft-tips .highlight { color: var(--gold-light); font-weight: 600; }
+
+        /* ===== 产品展示 ===== */
+        .products { background: linear-gradient(180deg, var(--cream) 0%, #f0ebe3 100%); }
+        .product-grid { display: grid; grid-template-columns: 1fr; gap: 40px; max-width: 700px; margin: 0 auto; }
+        .product-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08); transition: all 0.4s ease; opacity: 0; transform: translateY(40px); }
+        .product-card.visible { opacity: 1; transform: translateY(0); }
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .product-images { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #f0f0f0; }
+        .product-images.single { grid-template-columns: 1fr; }
+        .product-images img { width: 100%; height: 280px; object-fit: cover; transition: transform 0.5s ease; }
+        .product-card:hover .product-images img { transform: scale(1.03); }
+        .product-info { padding: 28px; }
+        .product-tag { display: inline-block; padding: 4px 12px; background: var(--gold); color: #fff; font-size: 11px; letter-spacing: 2px; border-radius: 2px; margin-bottom: 12px; }
+        .product-name { font-size: 22px; font-weight: 700; color: var(--dark); letter-spacing: 3px; margin-bottom: 12px; }
+        .product-en { font-size: 12px; color: #999; letter-spacing: 3px; margin-bottom: 16px; font-family: 'Georgia', serif; }
+        .product-desc { font-size: 14px; color: #666; line-height: 1.8; }
+        .product-meta { display: flex; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; flex-wrap: wrap; }
+        .product-meta span { font-size: 13px; color: #888; }
+        .product-meta strong { color: var(--wine-red); font-size: 15px; }
+        .product-serve { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 14px; background: #f8f4ee; border-radius: 6px; font-size: 13px; color: #666; }
+        .product-serve .serve-icon { font-size: 16px; }
+        .product-serve .serve-text { color: var(--wine-red); font-weight: 600; }
+
+        /* ===== 品牌实力 ===== */
+        .strength { background: var(--dark); color: #fff; }
+        .strength .section-title { color: #fff; }
+        .strength .section-desc { color: rgba(255,255,255,0.6); }
+        .strength-grid { display: grid; grid-template-columns: 1fr; gap: 30px; max-width: 700px; margin: 0 auto; }
+        .strength-card { padding: 40px 30px; background: var(--dark-light); border-radius: 12px; text-align: center; border: 1px solid rgba(201,169,110,0.15); transition: all 0.4s ease; opacity: 0; transform: translateY(30px); }
+        .strength-card.visible { opacity: 1; transform: translateY(0); }
+        .strength-card:hover { border-color: rgba(201,169,110,0.4); transform: translateY(-4px); }
+        .strength-icon { width: 60px; height: 60px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .strength-card h3 { font-size: 18px; color: var(--gold); margin-bottom: 16px; letter-spacing: 2px; }
+        .strength-card p { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.8; }
+        .strength-number { font-size: 48px; font-weight: 700; background: linear-gradient(135deg, var(--gold-light), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 20px 0; }
+
+        /* ===== 联系方式 ===== */
+        .contact { background: linear-gradient(180deg, #f0ebe3 0%, var(--cream) 100%); text-align: center; }
+        .contact-box { max-width: 600px; margin: 0 auto; padding: 50px 30px; background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .contact-box h3 { font-size: 22px; color: var(--dark); letter-spacing: 3px; margin-bottom: 30px; }
+        .contact-item { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; margin-bottom: 12px; background: var(--cream); border-radius: 8px; transition: all 0.3s; cursor: pointer; }
+        .contact-item:hover { background: #f0ebe3; transform: translateX(4px); }
+        .contact-icon { font-size: 20px; }
+        .contact-text { font-size: 15px; color: var(--dark); letter-spacing: 1px; }
+        .contact-invite { margin-top: 30px; padding: 24px; background: linear-gradient(135deg, var(--dark), var(--dark-light)); border-radius: 12px; color: #fff; }
+        .contact-invite p { font-size: 16px; line-height: 1.8; letter-spacing: 1px; }
+        .contact-invite .gold-text { color: var(--gold); font-weight: 600; }
+
+        /* ===== 页脚 ===== */
+        .footer { background: var(--dark); padding: 40px 20px; text-align: center; }
+        .footer-logo { font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 4px; margin-bottom: 12px; }
+        .footer p { font-size: 12px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+
+        /* ===== 滚动动画 ===== */
+        .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        /* ===== 响应式 ===== */
+        @media (min-width: 768px) {
+            .hero-title { font-size: 56px; }
+            .hero-title span { font-size: 72px; }
+            .product-grid { grid-template-columns: repeat(2, 1fr); max-width: 900px; }
+            .strength-grid { grid-template-columns: repeat(3, 1fr); max-width: 1000px; }
+            .craft-grid { grid-template-columns: repeat(2, 1fr); max-width: 900px; }
+            .craft-image { height: 320px; }
+        }
+        @media (max-width: 767px) {
+            .nav-menu { display: none; }
+            .hero-title { font-size: 32px; }
+            .hero-title span { font-size: 42px; }
+            .section { padding: 60px 16px; }
+            .product-images img { height: 220px; }
+            .craft-image { height: 300px; }
+            .share-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 编辑提示条 -->
+    <div class="edit-hint">✏️ 点击文字即可编辑，编辑后自动保存</div>
+
+    <!-- 导航 -->
+    <nav class="nav" id="nav">
+        <div class="nav-logo" data-editable="nav-logo">梅子树下</div>
+        <div class="nav-menu">
+            <a href="#about">品牌故事</a>
+            <a href="#craft">酿造工艺</a>
+            <a href="#products">佳酿系列</a>
+            <a href="#strength">品牌实力</a>
+            <a href="#contact">合作联系</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-particles" id="particles"></div>
+        <div class="hero-content">
+            <p class="hero-subtitle" data-editable="hero-subtitle">云南高原 · 匠心酿造</p>
+            <h1 class="hero-title">
+                <span data-editable="hero-title">梅子树下</span>
+                <span data-editable="hero-title2">酒庄</span>
+            </h1>
+            <p class="hero-desc" data-editable="hero-desc">产品如人品 · 匠心酿好酒</p>
+            <div class="hero-since" data-editable="hero-since">SINCE 2003</div>
+        </div>
+        <div class="scroll-hint"><span></span></div>
+    </section>
+
+    <!-- 品牌介绍 -->
+    <section class="section about" id="about">
+        <div class="section-header fade-in">
+            <p class="section-label" data-editable="about-label">BRAND STORY</p>
+            <h2 class="section-title" data-editable="about-title">品牌故事</h2>
+            <p class="section-desc" data-editable="about-desc">扎根云南高原二十载，以匠心酿造每一瓶好酒</p>
+        </div>
+        <div class="about-content">
+            <div class="about-image fade-in">
+                <img src="images/winery.jpg" alt="彩之雲酒莊">
+            </div>
+            <div class="about-text fade-in">
+                <p data-editable="about-p1">梅子树下酒庄始创于2003年，扎根云南高原深耕果酒酿造，至今已有20余年行业积累。品牌秉持<strong>"产品如人品，匠心酿好酒"</strong>的理念，线下累计售酒数百万瓶，口碑久经市场验证。</p>
+                <p data-editable="about-p2">原料取材云南高山鲜果，产地直采，最大程度凝萃自然本味。采用低温慢酿纯发酵工艺，依托三十年匠艺与专利技术双重加持，保障每一瓶酒的品质。</p>
+                <p data-editable="about-p3">现有青梅白兰地、咖啡果酒、玫瑰酒、桂花酒、李果酒、梅子酒等多款核心产品，每款都具备独特风味，为不同场合、不同心情提供恰到好处的选择。</p>
+            </div>
+            <div class="about-quote fade-in">
+                <p data-editable="about-quote">"产品如人品，匠心酿好酒"</p>
+            </div>
+            <div class="brands fade-in">
+                <div class="brand-tag" data-editable="brand1">遇见女神</div>
+                <div class="brand-tag" data-editable="brand2">梅子树下</div>
+                <div class="brand-tag" data-editable="brand3">滇越记忆</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 酿造工艺 -->
+    <section class="section craft" id="craft">
+        <div class="section-header fade-in">
+            <p class="section-label" data-editable="craft-label">CRAFTSMANSHIP</p>
+            <h2 class="section-title" data-editable="craft-title">酿造工艺</h2>
+            <p class="section-desc" data-editable="craft-desc">纯发酵工艺 · 低温慢酿 · 每一滴都凝聚匠心</p>
+        </div>
+        <div class="craft-grid">
+            <div class="craft-card">
+                <div class="craft-image"><img src="images/ferment1.jpg" alt="酒窖发酵罐"></div>
+                <div class="craft-info">
+                    <h3 data-editable="craft-h1">酒窖发酵</h3>
+                    <p data-editable="craft-p1">石砌酒窖恒温恒湿，不锈钢发酵罐整齐排列，每一罐酒都在最适宜的环境中静静发酵。</p>
+                </div>
+            </div>
+            <div class="craft-card">
+                <div class="craft-image"><img src="images/ferment2.jpg" alt="酒窖铭牌"></div>
+                <div class="craft-info">
+                    <h3 data-editable="craft-h2">匠心传承</h3>
+                    <p data-editable="craft-p2">三十年酿造经验，首席酿酒师全程把控。从原料筛选到发酵陈酿，每一个环节都精益求精。</p>
+                </div>
+            </div>
+        </div>
+        <div class="craft-tips fade-in">
+            <h3 data-editable="tips-title">品饮指南</h3>
+            <p data-editable="tips-p">所有酒品均为<span class="highlight">纯发酵酿造</span>，不兑白酒，不加香精色素<br>建议<span class="highlight">冷藏后饮用</span>，风味更佳，无需加冰</p>
+        </div>
+    </section>
+
+    <!-- 产品展示 -->
+    <section class="section products" id="products">
+        <div class="section-header fade-in">
+            <p class="section-label" data-editable="prod-label">FINE WINES</p>
+            <h2 class="section-title" data-editable="prod-title">四味佳酿</h2>
+            <p class="section-desc" data-editable="prod-desc">原生风物 · 匠造工艺 · 每一滴都是云南高原的味道</p>
+        </div>
+        <div class="product-grid">
+            <!-- 青梅白兰地 -->
+            <div class="product-card">
+                <div class="product-images">
+                    <img src="images/plum-brandy-new1.png" alt="青梅白兰地">
+                    <img src="images/plum-brandy1.jpg" alt="青梅白兰地">
+                </div>
+                <div class="product-info">
+                    <span class="product-tag" data-editable="tag1">匠心陈酿</span>
+                    <h3 class="product-name" data-editable="name1">青梅白兰地</h3>
+                    <p class="product-en" data-editable="en1">GREEN PLUM BRANDY</p>
+                    <p class="product-desc" data-editable="desc1">梅香清雅，锋芒有度，杯盏之间见分寸。青梅经纯发酵蒸馏，酸涩渐隐，清香自显。冷藏纯饮，风味更佳。</p>
+                    <div class="product-meta">
+                        <span data-editable="meta1">净含量: <strong>500ml</strong></span>
+                        <span data-editable="meta2">酒精度: <strong>40%vol</strong></span>
+                    </div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+
+            <!-- 咖啡果酒 -->
+            <div class="product-card">
+                <div class="product-images">
+                    <img src="images/coffee-new2.png" alt="咖啡果酒">
+                    <img src="images/coffee1.jpg" alt="咖啡果酒">
+                </div>
+                <div class="product-info">
+                    <span class="product-tag" data-editable="tag2">国家专利</span>
+                    <h3 class="product-name" data-editable="name2">咖啡果酒</h3>
+                    <p class="product-en" data-editable="en2">COFFEE FRUIT WINE</p>
+                    <p class="product-desc" data-editable="desc2">云南小粒咖啡入酒，经纯发酵、提醇与窖藏，微苦在时间里酿成醇厚。人生如此，经过岁月历练，愈发懂得沉稳。</p>
+                    <div class="product-meta">
+                        <span data-editable="meta3">净含量: <strong>500ml</strong></span>
+                        <span data-editable="meta4">酒精度: <strong>21%vol</strong></span>
+                    </div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+
+            <!-- 桂花酒 -->
+            <div class="product-card">
+                <div class="product-images single"><img src="images/osmanthus.jpg" alt="桂花酒"></div>
+                <div class="product-info">
+                    <span class="product-tag" style="background: #d4a843;" data-editable="tag3">花香清雅</span>
+                    <h3 class="product-name" data-editable="name3">桂花酒</h3>
+                    <p class="product-en" data-editable="en3">OSMANTHUS WINE</p>
+                    <p class="product-desc" data-editable="desc3">金秋桂花与高原鲜果的完美邂逅，纯发酵工艺酿造，花香馥郁，酒体柔和，入口回甘，是秋日里最温柔的馈赠。</p>
+                    <div class="product-meta"><span data-editable="meta5">原料: <strong>云南高山桂花</strong></span></div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+
+            <!-- 李果酒 -->
+            <div class="product-card">
+                <div class="product-images single"><img src="images/plum-wine.jpg" alt="李果酒"></div>
+                <div class="product-info">
+                    <span class="product-tag" style="background: #8b4513;" data-editable="tag4">陈酿经典</span>
+                    <h3 class="product-name" data-editable="name4">李果酒</h3>
+                    <p class="product-en" data-editable="en4">PLUM FRUIT WINE</p>
+                    <p class="product-desc" data-editable="desc4">精选云南高原李子，纯发酵低温慢酿，果香浓郁，酸甜适口，是佐餐小酌的绝佳选择。</p>
+                    <div class="product-meta"><span data-editable="meta6">原料: <strong>云南高山李子</strong></span></div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+
+            <!-- 玫瑰酒 -->
+            <div class="product-card">
+                <div class="product-images"><img src="images/rose2.jpg" alt="玫瑰酒"><img src="images/rose1.jpg" alt="玫瑰酒"></div>
+                <div class="product-info">
+                    <span class="product-tag" style="background: #c43b5e;" data-editable="tag5">国家专利</span>
+                    <h3 class="product-name" data-editable="name5">玫瑰酒</h3>
+                    <p class="product-en" data-editable="en5">ROSE FRUIT WINE</p>
+                    <p class="product-desc" data-editable="desc5">玫瑰果酒品类已获国家发明专利。纯发酵工艺酿造，花香与果香交融，酒色如宝石般瑰丽，入口柔顺，余韵悠长。</p>
+                    <div class="product-meta">
+                        <span data-editable="meta7">工艺: <strong>专利酿制</strong></span>
+                        <span data-editable="meta8">特色: <strong>花香馥郁</strong></span>
+                    </div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+
+            <!-- 梅子酒 -->
+            <div class="product-card">
+                <div class="product-images single"><img src="images/ume-wine.jpg" alt="梅子酒"></div>
+                <div class="product-info">
+                    <span class="product-tag" data-editable="tag6">招牌经典</span>
+                    <h3 class="product-name" data-editable="name6">梅子酒</h3>
+                    <p class="product-en" data-editable="en6">PLUM WINE</p>
+                    <p class="product-desc" data-editable="desc6">二十年经典传承，不兑白酒，不加香精色素。纯发酵酿造，原滋原味，是梅子树下酒庄的镇店之作。</p>
+                    <div class="product-meta"><span data-editable="meta9">特色: <strong>纯酿无添加</strong></span></div>
+                    <div class="product-serve"><span class="serve-icon">&#10052;</span><span>纯发酵酿造 · <span class="serve-text">冷藏饮用，无需加冰</span></span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 品牌实力 -->
+    <section class="section strength" id="strength">
+        <div class="section-header fade-in">
+            <p class="section-label" data-editable="strength-label">CORE STRENGTH</p>
+            <h2 class="section-title" data-editable="strength-title">品牌核心实力</h2>
+            <p class="section-desc" data-editable="strength-desc">二十年深耕，三大核心优势铸就品质壁垒</p>
+        </div>
+        <div class="strength-grid">
+            <div class="strength-card">
+                <div class="strength-icon">&#127942;</div>
+                <h3 data-editable="strength-h1">专业技术壁垒</h3>
+                <div class="strength-number">30<span style="font-size:20px">年</span></div>
+                <p data-editable="strength-p1">首席酿酒师拥有30年从业经验，全程把控酿造全流程。玫瑰果酒、咖啡果酒品类已获得国家发明专利，具备独家技术优势。</p>
+            </div>
+            <div class="strength-card">
+                <div class="strength-icon">&#9874;</div>
+                <h3 data-editable="strength-h2">成熟酿造体系</h3>
+                <div class="strength-number">100<span style="font-size:20px">%</span></div>
+                <p data-editable="strength-p2">以低温慢酿纯发酵为核心工艺，充分锁留原生果香。不兑白酒，不加香精色素，每一滴都是纯发酵的诚意。</p>
+            </div>
+            <div class="strength-card">
+                <div class="strength-icon">&#128200;</div>
+                <h3 data-editable="strength-h3">扎实市场基础</h3>
+                <div class="strength-number">2003<span style="font-size:20px">年</span></div>
+                <p data-editable="strength-p3">20年线下市场深耕积累，消费者接受度高，口碑经过长期市场验证，累计售酒数百万瓶，为线上渠道拓展打下成熟基础。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 联系方式 -->
+    <section class="section contact" id="contact">
+        <div class="section-header fade-in">
+            <p class="section-label" data-editable="contact-label">CONTACT US</p>
+            <h2 class="section-title" data-editable="contact-title">合作联系</h2>
+            <p class="section-desc" data-editable="contact-desc">诚邀各界朋友莅临品酒，共商发展，携手开拓市场</p>
+        </div>
+        <div class="contact-box fade-in">
+            <h3 data-editable="contact-h3">梅子树下酒庄</h3>
+            <div class="contact-item" onclick="copyText('云南省昆明市晋宁区宝丰')">
+                <span class="contact-icon">&#127758;</span>
+                <span class="contact-text" data-editable="contact-addr">云南省昆明市晋宁区宝丰</span>
+            </div>
+            <div class="contact-item" onclick="copyText('15877936937')">
+                <span class="contact-icon">&#9742;</span>
+                <span class="contact-text" data-editable="contact-phone">15877936937</span>
+            </div>
+            <div class="contact-item" onclick="copyText('彩之雲酒莊')">
+                <span class="contact-icon">&#127807;</span>
+                <span class="contact-text" data-editable="contact-wx">彩之雲酒莊</span>
+            </div>
+            <div class="contact-invite">
+                <p data-editable="contact-invite">我们期待与您的合作<br><span class="gold-text">共品佳酿 · 共创未来</span></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-logo" data-editable="footer-logo">梅子树下酒庄</div>
+        <p data-editable="footer-p">云南高原匠心果酒 · 始于2003 · 产品如人品 · 匠心酿好酒</p>
+    </footer>
+
+    <!-- ===== 浮动工具栏 ===== -->
+    <div class="fab-bar">
+        <button class="fab-btn fab-edit" id="editBtn" onclick="toggleEdit()">
+            &#9998;
+            <span class="fab-label">编辑内容</span>
+        </button>
+        <button class="fab-btn fab-share" onclick="openShare()">
+            &#8645;
+            <span class="fab-label">分享转发</span>
+        </button>
+    </div>
+
+    <!-- ===== 分享面板 ===== -->
+    <div class="share-panel-overlay" id="shareOverlay" onclick="closeShare()"></div>
+    <div class="share-panel" id="sharePanel">
+        <div class="share-title">分享与转发</div>
+        <div class="share-grid">
+            <div class="share-item" onclick="nativeShare()">
+                <div class="share-icon wx">&#128241;</div>
+                <div class="share-text">系统分享</div>
+            </div>
+            <div class="share-item" onclick="copyLink()">
+                <div class="share-icon link">&#128279;</div>
+                <div class="share-text">复制链接</div>
+            </div>
+            <div class="share-item" onclick="generatePoster()">
+                <div class="share-icon poster">&#128444;</div>
+                <div class="share-text">生成海报</div>
+            </div>
+            <div class="share-item" onclick="toggleEdit()">
+                <div class="share-icon edit">&#9998;</div>
+                <div class="share-text">编辑内容</div>
+            </div>
+            <div class="share-item" onclick="saveContent()">
+                <div class="share-icon save">&#128190;</div>
+                <div class="share-text">保存内容</div>
+            </div>
+            <div class="share-item" onclick="copyText('梅子树下酒庄 - 云南高原匠心果酒，纯发酵酿造，冷藏饮用风味更佳。电话：15877936937')">
+                <div class="share-icon copy">&#128203;</div>
+                <div class="share-text">复制文案</div>
+            </div>
+            <div class="share-item" onclick="wxShare()">
+                <div class="share-icon wx">&#128172;</div>
+                <div class="share-text">微信转发</div>
+            </div>
+            <div class="share-item" onclick="closeShare()">
+                <div class="share-icon browser">&#10060;</div>
+                <div class="share-text">取消</div>
+            </div>
+        </div>
+        <div class="share-cancel" onclick="closeShare()">取消</div>
+    </div>
+
+    <!-- ===== 海报预览 ===== -->
+    <div class="poster-modal" id="posterModal">
+        <button class="poster-close" onclick="closePoster()">&times;</button>
+        <div class="poster-box" id="posterBox"></div>
+        <p class="poster-tip">长按图片保存到相册<br>即可分享给好友</p>
+    </div>
+
+    <!-- ===== Toast ===== -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== 微信分享提示 ===== -->
+    <div class="wx-tip" id="wxTip" onclick="this.classList.remove('open')">
+        <div class="wx-tip-arrow"></div>
+        <p>请点击右上角菜单<br>选择「发送给朋友」或「分享到朋友圈」</p>
+    </div>
+
+    <script>
+        // ===== 粒子效果 =====
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            particle.style.animationDuration = (6 + Math.random() * 6) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // ===== 导航滚动 =====
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 100);
+        });
+
+        // ===== 滚动动画 =====
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => e.isIntersecting && e.target.classList.add('visible'));
+        }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.fade-in, .product-card, .strength-card, .craft-card, .craft-tips').forEach(el => observer.observe(el));
+
+        const productCards = document.querySelectorAll('.product-card');
+        productCards.forEach((c, i) => c.style.transitionDelay = (i * 0.15) + 's');
+        document.querySelectorAll('.strength-card').forEach((c, i) => c.style.transitionDelay = (i * 0.2) + 's');
+        document.querySelectorAll('.craft-card').forEach((c, i) => c.style.transitionDelay = (i * 0.2) + 's');
+
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.getAttribute('href'));
+                target && target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // ===== 编辑功能 =====
+        let isEditing = false;
+        const editBtn = document.getElementById('editBtn');
+        const editableEls = document.querySelectorAll('[data-editable]');
+
+        function toggleEdit() {
+            isEditing = !isEditing;
+            document.body.classList.toggle('editing', isEditing);
+            editBtn.classList.toggle('active', isEditing);
+            editBtn.innerHTML = isEditing ? '&#10004;<span class="fab-label">完成编辑</span>' : '&#9998;<span class="fab-label">编辑内容</span>';
+            editableEls.forEach(el => {
+                el.contentEditable = isEditing;
+                el.spellcheck = false;
+            });
+            showToast(isEditing ? '已进入编辑模式，点击文字即可修改' : '编辑已保存');
+            if (!isEditing) saveToStorage();
+            closeShare();
+        }
+
+        // 自动保存编辑
+        editableEls.forEach(el => {
+            el.addEventListener('blur', () => { if (isEditing) saveToStorage(); });
+        });
+
+        function saveToStorage() {
+            const data = {};
+            editableEls.forEach(el => { data[el.dataset.editable] = el.innerHTML; });
+            localStorage.setItem('wineh5_content', JSON.stringify(data));
+        }
+
+        function saveContent() {
+            saveToStorage();
+            showToast('内容已保存到本地');
+            closeShare();
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('wineh5_content');
+            if (!saved) return;
+            try {
+                const data = JSON.parse(saved);
+                editableEls.forEach(el => {
+                    if (data[el.dataset.editable]) el.innerHTML = data[el.dataset.editable];
+                });
+            } catch(e) {}
+        }
+        loadFromStorage();
+
+        // ===== 分享面板 =====
+        function openShare() {
+            document.getElementById('sharePanel').classList.add('open');
+            document.getElementById('shareOverlay').classList.add('open');
+        }
+        function closeShare() {
+            document.getElementById('sharePanel').classList.remove('open');
+            document.getElementById('shareOverlay').classList.remove('open');
+        }
+
+        // ===== 原生分享 =====
+        function nativeShare() {
+            if (navigator.share) {
+                navigator.share({
+                    title: document.title,
+                    text: '梅子树下酒庄 - 云南高原匠心果酒，纯发酵酿造，冷藏饮用风味更佳。',
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                copyLink();
+            }
+            closeShare();
+        }
+
+        // ===== 复制链接 =====
+        function copyLink() {
+            copyText(window.location.href);
+            closeShare();
+        }
+
+        // ===== 通用复制 =====
+        function copyText(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+                showToast('已复制到剪贴板');
+            }
+        }
+
+        // ===== 微信分享提示 =====
+        function wxShare() {
+            closeShare();
+            document.getElementById('wxTip').classList.add('open');
+            setTimeout(() => document.getElementById('wxTip').classList.remove('open'), 5000);
+        }
+
+        // ===== 生成海报 =====
+        async function generatePoster() {
+            closeShare();
+            showToast('正在生成海报...');
+            try {
+                // 创建一个简洁的海报容器
+                const poster = document.createElement('div');
+                poster.style.cssText = 'width:375px;padding:0;background:#fff;font-family:"Noto Serif SC",serif;';
+                poster.innerHTML = `
+                    <div style="position:relative;height:200px;overflow:hidden;">
+                        <img src="images/winery.jpg" style="width:100%;height:100%;object-fit:cover;filter:brightness(0.5);">
+                        <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;">
+                            <div style="font-size:36px;font-weight:700;letter-spacing:6px;margin-bottom:8px;">梅子树下</div>
+                            <div style="font-size:14px;letter-spacing:4px;color:#c9a96e;">云南高原 · 匠心果酒</div>
+                        </div>
+                    </div>
+                    <div style="padding:20px;">
+                        <div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:16px;letter-spacing:2px;">四味佳酿</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">青梅白兰地</span>
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">咖啡果酒</span>
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">桂花酒</span>
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">李果酒</span>
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">玫瑰酒</span>
+                            <span style="padding:4px 10px;background:#f8f4ee;border-radius:2px;font-size:12px;color:#666;">梅子酒</span>
+                        </div>
+                        <div style="font-size:13px;color:#666;line-height:1.8;margin-bottom:16px;">纯发酵酿造，不兑白酒，不加香精色素。<br>冷藏饮用，风味更佳。</div>
+                        <div style="border-top:1px solid #eee;padding-top:16px;">
+                            <div style="font-size:13px;color:#666;margin-bottom:6px;">&#128205; 云南省昆明市晋宁区宝丰</div>
+                            <div style="font-size:13px;color:#666;margin-bottom:6px;">&#9742; 15877936937</div>
+                        </div>
+                        <div style="text-align:center;margin-top:16px;font-size:12px;color:#999;letter-spacing:1px;">长按识别 · 扫码访问</div>
+                    </div>
+                    <div style="background:#1a1a1a;padding:16px;text-align:center;">
+                        <div style="font-size:14px;color:#c9a96e;letter-spacing:3px;font-weight:700;">梅子树下酒庄</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">始于2003 · 产品如人品 · 匠心酿好酒</div>
+                    </div>
+                `;
+                document.body.appendChild(poster);
+                poster.style.position = 'fixed'; poster.style.left = '-9999px'; poster.style.top = '0';
+
+                const canvas = await htmlToImage.toCanvas(poster, { pixelRatio: 2 });
+                document.body.removeChild(poster);
+
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png');
+                const box = document.getElementById('posterBox');
+                box.innerHTML = ''; box.appendChild(img);
+                document.getElementById('posterModal').classList.add('open');
+            } catch (err) {
+                showToast('海报生成失败，请重试');
+            }
+        }
+
+        function closePoster() {
+            document.getElementById('posterModal').classList.remove('open');
+        }
+
+        // ===== Toast =====
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // 检测微信浏览器
+        const isWeixin = /MicroMessenger/i.test(navigator.userAgent);
+        if (isWeixin) {
+            // 微信环境下尝试设置分享标题
+            document.title = '梅子树下酒庄 - 云南高原匠心果酒';
+        }
+    </script>
+</body>
+</html>
